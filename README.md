@@ -1,2 +1,2 @@
 # network-witch
-Network performance masurement tools for SDN with GUI and Simulator
+Network performance measurement tool for SDN with GUI and Simulator.
