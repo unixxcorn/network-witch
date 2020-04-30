@@ -25,23 +25,27 @@ class LinearTopo(Topo):
         host = self.addHost('h1')
         self.addLink(host, switch)
 
-def performanceTest(n=4):
+def performanceTest(n=4, suffix=""):
     "Create and test a network"
     topo = LinearTopo(n)
-    link = partial( TCLink, delay='2ms', bw=10 )
+    link = partial( TCLink, bw=10 )
     net = Mininet(topo=topo, controller=RemoteController("c0") , switch=OVSKernelSwitch, link=link)
     net.start()
 
     print "Simulating network with %d switchs" % n
 
     print "Controller to Switch"
+    f = open('out-c-s-'+suffix,'a+')
+    print >>f, "switch size = %d" % n
     c = net.get("c0")
     for s in range(n):
         sw = net.get("s%d" %s)
-        throughput = net.iperf((c, sw))[0]
+        throughput0, throughput1 = net.iperf((c, sw))[0] ,net.iperf((c, sw))[1]
         _,_, latency_c_to_s = (net.pingFull((c, sw)))[0]
         _,_, mi, av, ma, mdev = latency_c_to_s
-        print "s%d" %s, throughput, av
+        print "s%d" %s, throughput0, throughput1, av
+        print >>f, "s%d, %s, %s , %f" % (s, throughput0, throughput1, av)
+    f.close()
 
     print "End to End with %d switchs" % n
 
@@ -53,15 +57,20 @@ def performanceTest(n=4):
 
     # print "Testing bandwidth between h1 and h2"
     h0, h1 = net.get( 'h0', 'h1' )
-    print net.iperf((h0, h1))[0]
-
-    print h0.cmd('ping -c 5 ' + h1.IP() + ' | grep rtt')
     
+    throughput = net.iperf((h0, h1))
+    ping = h0.cmd('ping -c 5 ' + h1.IP() + ' | grep rtt')
+
+    f = open('out-n-n-'+suffix,'a+')
+    print throughput, ping
+    print >>f, "%d -> %s %s %s" % (n, throughput[0], throughput[1], ping)
+    f.close()
     net.stop()
 
 if __name__ == '__main__':
     # Tell mininet to print useful information
     start = time()
     setLogLevel('warning')
-    for i in range(2, 5):
-        performanceTest(i)
+    for j in range(3):
+        for i in [50, 100, 150]:
+            performanceTest(i, suffix="LongNet-"+str(j))

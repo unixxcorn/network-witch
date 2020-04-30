@@ -1,0 +1,1 @@
+date && mn -c && python src/topology.py && date
